@@ -4,7 +4,7 @@
 #include <atomic>
 #include "../transforms/config.hpp"
 
-// Tests contiguous writes and potential cache ping-pong 
+
 
 // PREFETCH can help with larger entries 
 
