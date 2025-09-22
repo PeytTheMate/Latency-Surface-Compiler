@@ -22,20 +22,15 @@ def ecdf(xs):
     y = np.arange(1, len(x)+1)/len(x)
     return x,y
 
-
 def find_paths(kernel, params):
     # reconstruct filename
-    def tag(p): 
-        return f"u{p['u']}_p{p['pf']}_b{p['bf']}_l{p['la']}_a{p['al']}"
-    
+    def tag(p): return f"u{p['u']}_p{p['pf']}_b{p['bf']}_l{p['la']}_a{p['al']}"
     base = ROOT/f"data/runs/{kernel}_base.csv"
     best = None
-
     for row in summary:
         if row["kernel"]==kernel and row["params"]==params:
             best = ROOT/f"data/runs/{kernel}_{tag(params)}.csv"
             break
-        
     return base, best
 
 # pick best per kernel (by J)
@@ -45,10 +40,9 @@ for row in summary:
     by_k.setdefault(k, []).append(row)
 
 for k, rows in by_k.items():
-    best = sorted(rows, key = lambda r: r["J"])[0]
+    best = sorted(rows, key=lambda r: r["J"])[0]
     base_path, best_path = find_paths(k, best["params"])
     xb = load_series(base_path);  x1 = load_series(best_path)
-
     # ECDF
     xb_x, xb_y = ecdf(xb); x1_x, x1_y = ecdf(x1)
 
@@ -63,4 +57,3 @@ for k, rows in by_k.items():
     out = ROOT/f"data/reports/{k}_ecdf.png"
     plt.savefig(out, dpi=160)
     plt.close()
-
