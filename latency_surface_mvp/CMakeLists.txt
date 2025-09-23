@@ -4,11 +4,24 @@ project(latency_surface_mvp CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Release)
 
-# Toggle-able options with defaults
+# Toggle-able options with defaults that mirror transforms/config.hpp
+if(NOT DEFINED UNROLL_FACTOR)
+  set(UNROLL_FACTOR 1)
+endif()
+if(NOT DEFINED PREFETCH_DIST)
+  set(PREFETCH_DIST 0)
+endif()
+if(NOT DEFINED BRANCH_FLATTEN)
+  set(BRANCH_FLATTEN 0)
+endif()
+if(NOT DEFINED LAYOUT_AOS)
+  set(LAYOUT_AOS 1)
+endif()
+if(NOT DEFINED ALIGN_BYTES)
+  set(ALIGN_BYTES 0)
+endif()
+
 foreach(opt IN ITEMS UNROLL_FACTOR PREFETCH_DIST BRANCH_FLATTEN LAYOUT_AOS ALIGN_BYTES)
-  if(NOT DEFINED ${opt})
-    set(${opt} 1)  # sensible defaults
-  endif()
   add_compile_definitions(${opt}=${${opt}})
 endforeach()
 
