@@ -18,6 +18,7 @@
 #include "../kernels/parser_fix.hpp"
 #include "../kernels/ring_buffer.hpp"
 #include "../kernels/order_book.hpp"
+#include "local_stubs.hpp"
 
 
 int main(int argc, char** argv) {
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
     
     bench([&](){
       // NOTE: preserve the original calling form; we just ensure the result is used.
-      sink2 ^= hot_find_level(*(QuoteAoS(*) )b.data(), N, 123.4f);
+      sink2 ^= hot_find_level(reinterpret_cast<QuoteAoS*>(b.data()), N, 123.4f);
       do_not_optimize_away(sink2);
     }, batches, iters, samples);
 #else

@@ -45,10 +45,38 @@ def code_size_bytes():
   return os.path.getsize(exe)
 
 def run_kernel(kernel, outfile):
-  exe = BUILD / "bench"
-  subprocess.run([str(exe), kernel, str(outfile), "20000", "64"],
-                 check=True, cwd=ROOT,
-                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exe = BUILD / "bench"
+    res = subprocess.run([str(exe), kernel, str(outfile), "20000", "64"],
+                         cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if res.returncode != 0:
+        raise RuntimeError(f"bench failed for {kernel}:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}")
+
+
+def evaluate(csv_path):
+    vals = []
+    with open(csv_path) as f:
+        first = f.readline().strip()
+        if first == "ns":
+            vals = [int(row["ns"]) for row in csv.DictReader([first] + f.readlines())]
+        else:
+            # treat file as plain newline-separated integers; include first line
+            vals = [int(first)] + [int(line.strip()) for line in f if line.strip()]
+    vals.sort()
+    n = len(vals)
+    def q(p): 
+        i = max(0, min(n-1, math.ceil(p*n)-1))
+        return vals[i]
+    return {
+        "p50": q(0.50), "p90": q(0.90), "p99": q(0.99), "p999": q(0.999),
+        "stdev": statistics.pstdev(vals), "mean": statistics.mean(vals)
+    }
+
+def score(stats, size):
+    """Weighted jitter-aware objective (favor p99.9 latency, penalize large binaries)."""
+    jitter_penalty = stats["p999"] + 0.1 * stats["stdev"]
+    size_penalty = size / 1e6  # scale MB
+    return jitter_penalty + size_penalty
+
 
 def main():
   BUILD.mkdir(exist_ok=True)
@@ -77,7 +105,7 @@ def main():
       if params==base: 
         continue
       
-      compile_variant(params)
+      compile_variant(params, jobs)
       sz = code_size_bytes()
       out_csv = DATA/f"{kernel}_u{u}_p{pf}_b{bf}_l{la}_a{al}.csv"
       run_kernel(kernel, out_csv)

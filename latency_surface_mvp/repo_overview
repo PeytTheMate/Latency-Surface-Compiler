@@ -1,0 +1,21 @@
+latency-surface-mvp/
+├─ CMakeLists.txt
+├─ include/
+│  └─ bench.hpp
+├─ kernels/
+│  ├─ parser_fix.hpp
+│  ├─ ring_buffer.hpp
+│  ├─ order_book.hpp
+│  └─ hash_lookup.hpp
+├─ src/
+│  └─ bench_main.cpp
+├─ transforms/
+│  └─ config.hpp            # toggles/macros for transforms
+├─ scripts/
+│  ├─ run_search.py
+│  ├─ analyze.py
+│  └─ plot_report.py
+├─ data/
+│  ├─ runs/                 # CSVs land here
+│  └─ reports/
+└─ README.md
