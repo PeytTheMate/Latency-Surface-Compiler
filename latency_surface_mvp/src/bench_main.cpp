@@ -1,58 +1,96 @@
+// --
+// Entry point for running kernel benchmarks.
+// CLI: ./bench <kernel> <outfile> <batches> <iters_per_batch>
+// - Dispatches to parser, ring buffer, or order book kernels
+// - Uses bench.hpp timing (mach_absolute_time on macOS; clock_gettime elsewhere)
+// - Batches iterations to stabilize p99/p99.9 tails
+// - Adds do_not_optimize_away() sinks so work is never elided by the compiler
+// - Writes per-call latency samples (ns) to CSV; prints quick mean to stderr
+// --
+
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <numeric>
+
 #include "../include/bench.hpp"
 #include "../kernels/parser_fix.hpp"
 #include "../kernels/ring_buffer.hpp"
 #include "../kernels/order_book.hpp"
 
+
 int main(int argc, char** argv) {
   const char* kernel = (argc > 1) ? argv[1] : "parser";
-  const char* out = (argc > 2) ? argv[2] : "data/runs/out.csv";
-  size_t batches = (argc > 3) ? std::stoul(argv[3]) : 20000;
-  size_t iters   = (argc > 4) ? std::stoul(argv[4]) : 64;
+  const char* out    = (argc > 2) ? argv[2] : "data/runs/out.csv";
+
+  // Heavier defaults (good for Apple Silicon): helps stabilize tail stats.
+  // Override via CLI if needed.
+  size_t batches = (argc > 3) ? std::stoul(argv[3]) : 50000;
+  size_t iters   = (argc > 4) ? std::stoul(argv[4]) : 256;
 
   std::vector<uint32_t> samples;
 
   if (std::string(kernel) == "parser") {
 
     std::vector<uint8_t> buf(256);
-    for (size_t i=0;i<buf.size();++i) buf[i] = "012345=|"[i%8];
+    for (size_t i = 0; i < buf.size(); ++i) buf[i] = "012345=|"[i % 8];
     Msg m{buf.data(), buf.size()};
-    bench([&](){ (void)hot_parser(m); }, batches, iters, samples);
 
-  } else if (std::string(kernel)=="ring") {
+    // Prevent the optimizer from removing the work:
+    uint32_t sink = 0;
+    bench([&](){
+      sink ^= hot_parser(m);
+      do_not_optimize_away(sink);
+    }, batches, iters, samples);
 
-    static Ring<uint64_t, 1<<12> r;
+  } else if (std::string(kernel) == "ring") {
+
+    static Ring<uint64_t, 1 << 12> r;   // power of two size ring
     std::vector<uint64_t> src(32, 42);
-    bench([&](){ hot_ring_write(r, src.data(), src.size()); }, batches, iters, samples);
 
-  } else if (std::string(kernel)=="obook") {
-    constexpr int N=1024;
+    bench([&](){
+      hot_ring_write(r, src.data(), src.size());
+      // Touch ring state to keep the writes "observable"
+      do_not_optimize_away(r.head.load(std::memory_order_relaxed));
+    }, batches, iters, samples);
+
+  } else if (std::string(kernel) == "obook") {
+    constexpr int N = 1024;
 
 #if LAYOUT_AOS
     std::vector<QuoteAoS> b(N);
-    bench([&](){ (void)hot_find_level(*(QuoteAoS(*) )b.data(), N, 123.4f); }, batches, iters, samples);
-
+    int sink2 = 0;
+    
+    bench([&](){
+      // NOTE: preserve the original calling form; we just ensure the result is used.
+      sink2 ^= hot_find_level(*(QuoteAoS(*) )b.data(), N, 123.4f);
+      do_not_optimize_away(sink2);
+    }, batches, iters, samples);
 #else
-    std::vector<float> px(N), qty(N); std::vector<uint32_t> id(N);
+    std::vector<float>     px(N),  qty(N);
+    std::vector<uint32_t>  id(N);
     QuoteSoA B{px.data(), qty.data(), id.data()};
-    bench([&](){ (void)hot_find_level(B, N, 123.4f); }, batches, iters, samples);
-
+    int sink3 = 0;
+    bench([&](){
+      sink3 ^= hot_find_level(B, N, 123.4f);
+      do_not_optimize_away(sink3);
+    }, batches, iters, samples);
 #endif
+
   } else {
-    std::cerr << "unknown kernel\n"; return 1;
+    std::cerr << "unknown kernel\n";
+    return 1;
   }
 
+  // Persist results (I/O outside the hot path).
   std::ofstream ofs(out);
   ofs << "ns\n";
-  for (auto v: samples) ofs << v << "\n";
+  for (auto v : samples) ofs << v << "\n";
   ofs.close();
 
-  // Print quick stats to std out
-  auto mean = double(std::accumulate(samples.begin(), samples.end(), 0ull))/samples.size();
-  std::cerr << "samples=" << samples.size()<<" mean_ns=" << mean << "\n";
+  // Quick mean for sanity (use analyze.py for full stats).
+  auto mean = double(std::accumulate(samples.begin(), samples.end(), 0ull)) / samples.size();
+  std::cerr << "samples=" << samples.size() << " mean_ns=" << mean << "\n";
   return 0;
 }
