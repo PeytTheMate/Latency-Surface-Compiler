@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #ifndef UNROLL_FACTOR
 #define UNROLL_FACTOR 1
 #endif
@@ -21,7 +23,9 @@
 #endif
 
 #if ALIGN_BYTES > 0
-  #define MAYBE_ALIGN alignas(ALIGN_BYTES)
+inline constexpr std::size_t LSC_SANITIZED_ALIGN_BYTES =
+    ALIGN_BYTES < alignof(std::max_align_t) ? alignof(std::max_align_t) : ALIGN_BYTES;
+  #define MAYBE_ALIGN alignas(::LSC_SANITIZED_ALIGN_BYTES)
 #else
   #define MAYBE_ALIGN
 #endif
