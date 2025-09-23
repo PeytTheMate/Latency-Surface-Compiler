@@ -3,7 +3,7 @@
 // CLI: ./bench <kernel> <outfile> <batches> <iters_per_batch>
 // - Dispatches to parser, ring buffer, or order book kernels
 // - Uses bench.hpp timing (mach_absolute_time on macOS; clock_gettime elsewhere)
-// - Batches iterations to stabilize p99/p99.9 tails
+// - Batches iterations to stabilize p99/p999 tails
 // - Adds do_not_optimize_away() sinks so work is never elided by the compiler
 // - Writes per-call latency samples (ns) to CSV; prints quick mean to stderr
 // --

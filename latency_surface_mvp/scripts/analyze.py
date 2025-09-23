@@ -5,7 +5,7 @@ from pathlib import Path
 # Post-processing for autotuner results.
     # - Loads summary.json
     # - Finds best config per kernel
-    # - Compares against baseline, reports % improvements (p99, p99.9, stdev)
+    # - Compares against baseline, reports % improvements (p99, p999, stdev)
     # - Prints concise JSON summary
 
 
@@ -32,7 +32,7 @@ for k, rows in by_k.items():
         "baseline": {"stats":base["stats"], "params":base["params"]},
         "best": {"stats":best["stats"], "params":best["params"]},
         "improvement_p99_%": 100.0*(base["stats"]["p99"] - best["stats"]["p99"])/base["stats"]["p99"],
-        "improvement_p999_%": 100.0*(base["stats"]["p99.9"] - best["stats"]["p99.9"])/base["stats"]["p99.9"],
+        "improvement_p999_%": 100.0*(base["stats"]["p999"] - best["stats"]["p999"])/base["stats"]["p999"],
         "stdev_drop_%": 100.0*(base["stats"]["stdev"] - best["stats"]["stdev"])/base["stats"]["stdev"],
         "size_growth_x": best["stats"]["size_rel"]
     }
