@@ -1,0 +1,31 @@
+#ifndef TRANSFORMS_CONFIG_HPP
+#define TRANSFORMS_CONFIG_HPP
+
+// Safe defaults so code compiles even if build flags are missing.
+#ifndef ALIGN_BYTES
+#define ALIGN_BYTES 0
+#endif
+
+#if ALIGN_BYTES > 0
+  #define MAYBE_ALIGN alignas(ALIGN_BYTES)
+#else
+  #define MAYBE_ALIGN
+#endif
+
+#ifndef BRANCH_FLATTEN
+#define BRANCH_FLATTEN 0
+#endif
+
+#ifndef FLATTENED_SELECT
+#define FLATTENED_SELECT(cond, a, b) ((cond) ? (a) : (b))
+#endif
+
+#ifndef PREFETCH_DIST
+#define PREFETCH_DIST 0
+#endif
+
+#ifndef PREFETCH
+#define PREFETCH(x) ((void)0)
+#endif
+
+#endif // TRANSFORMS_CONFIG_HPP
