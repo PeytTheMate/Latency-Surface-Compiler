@@ -18,7 +18,10 @@
 #include "../kernels/parser_fix.hpp"
 #include "../kernels/ring_buffer.hpp"
 #include "../kernels/order_book.hpp"
+
+#ifndef LATENCY_SURFACE_HAVE_ORDER_BOOK
 #include "local_stubs.hpp"
+#endif
 
 
 int main(int argc, char** argv) {
