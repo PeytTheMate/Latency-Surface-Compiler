@@ -1,0 +1,8 @@
+/build*/
+/CMakeFiles/
+/CMakeCache.txt
+.vscode/
+venv/
+.DS_Store
+
+/latency_surface_mvp/build

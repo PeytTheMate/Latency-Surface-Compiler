@@ -1,35 +1,35 @@
 #pragma once
 #include <cstdint>
-#include <cstddef>
-#include <algorithm>
-#include "../transforms/config.hpp"
 
+// defaults for flattening hooks
+#ifndef BRANCH_FLATTEN
+#define BRANCH_FLATTEN 0
+#endif
 
-struct QuoteAoS { float px; float qty; uint32_t id; };
-struct QuoteSoA { float* px; float* qty; uint32_t* id; };
+#ifndef FLATTENED_SELECT
+#define FLATTENED_SELECT(cond, a, b) ((cond) ? (a) : (b))
+#endif
 
-template<typename Book>
-inline int hot_find_level(Book& b, int n, float target) {
+// Return index of last element <= target in sorted book[0..n).
+// Returns -1 if all elements > target.
+inline int upper_bound_idx(const int* book, int n, int target) {
   int lo = 0;
-  hi = n - 1;
-
-  #pragma clang loop unroll_count(UNROLL_FACTOR)
+  int hi = n - 1;
 
   while (lo <= hi) {
     int mid = (lo + hi) >> 1;
+    bool le = (book[mid] <= target);
 
-#if LAYOUT_AOS
-    float px = ((QuoteAoS*)&b)[mid].px;
-
-#else
-    float px = b.px[mid];
-
-#endif
-    // branch flattening for cmp
-    bool le = (px <= target);
+#if BRANCH_FLATTEN
     lo = FLATTENED_SELECT(le, mid + 1, lo);
-    hi = FLATTENED_SELECT(le, hi, mid - 1);
-
+    hi = FLATTENED_SELECT(le, hi,        mid - 1);
+#else
+    if (le) {
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+#endif
   }
   return hi;
 }
