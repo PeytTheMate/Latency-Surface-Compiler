@@ -1,7 +1,5 @@
-import os, subprocess, itertools, csv, json, statistics, shutil, time, math
+import os, subprocess, itertools, csv, json, statistics, math
 from pathlib import Path
-import pandas as pd
-import numpy as np
 
 # If we want speed later, we can switch to Bayesian optimization, this is just for MVP
 # Grid search autotuner for latency surface MVP
@@ -17,13 +15,29 @@ BUILD = ROOT / "build"
 DATA  = ROOT / "data" / "runs"
 DATA.mkdir(parents=True, exist_ok=True)
 
+
+def parse_int_list(env_key, default):
+    raw = os.environ.get(env_key)
+    if not raw:
+        return default
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if not parts:
+        return default
+    try:
+        return [int(p) for p in parts]
+    except ValueError as exc:
+        raise ValueError(f"Environment variable {env_key} must be a comma-separated list of integers") from exc
+
 KERNELS = ["parser", "ring", "obook"]
 
-UNROLLS  = [1,2,4,8]
-PREFETCH = [0,32,64]
-FLATTEN  = [0,1]
-LAYOUT   = [0,1]
-ALIGN    = [0,64]
+UNROLLS  = parse_int_list("LSC_UNROLLS",  [1,2,4,8])
+PREFETCH = parse_int_list("LSC_PREFETCH", [0,32,64])
+FLATTEN  = parse_int_list("LSC_FLATTEN",  [0,1])
+LAYOUT   = parse_int_list("LSC_LAYOUT",   [0,1])
+ALIGN    = parse_int_list("LSC_ALIGN",    [0,64])
+
+BATCHES = int(os.environ.get("LSC_BATCHES", "20000"))
+ITERS   = int(os.environ.get("LSC_ITERS", "64"))
 
 def compile_variant(params, jobs: int):
   # Configure with variant flags
@@ -46,7 +60,7 @@ def code_size_bytes():
 
 def run_kernel(kernel, outfile):
     exe = BUILD / "bench"
-    res = subprocess.run([str(exe), kernel, str(outfile), "20000", "64"],
+    res = subprocess.run([str(exe), kernel, str(outfile), str(BATCHES), str(ITERS)],
                          cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if res.returncode != 0:
         raise RuntimeError(f"bench failed for {kernel}:\nSTDOUT:\n{res.stdout}\nSTDERR:\n{res.stderr}")
@@ -90,35 +104,50 @@ def main():
   base_size = code_size_bytes()
 
   results = []
+
+  # Baseline runs for each kernel reuse the same binary.
   for kernel in KERNELS:
-    # Run baseline
-    base_csv = DATA/f"{kernel}_base.csv"
+    base_csv = DATA / f"{kernel}_base.csv"
     run_kernel(kernel, base_csv)
     base_stats = evaluate(base_csv)
-    base_stats["size"]=base_size
-    base_stats["size_rel"]=1.0
-    results.append({"kernel":kernel,"params":base,"stats":base_stats,"J":score(base_stats, base_size)})
+    base_stats["size"] = base_size
+    base_stats["size_rel"] = 1.0
+    results.append({
+      "kernel": kernel,
+      "params": base.copy(),
+      "stats": base_stats,
+      "J": score(base_stats, base_size)
+    })
 
-    for u,pf,bf,la,al in itertools.product(UNROLLS,PREFETCH,FLATTEN,LAYOUT,ALIGN):
-      
-      params=dict(u=u,pf=pf,bf=bf,la=la,al=al)
-      if params==base: 
-        continue
-      
-      compile_variant(params, jobs)
-      sz = code_size_bytes()
-      out_csv = DATA/f"{kernel}_u{u}_p{pf}_b{bf}_l{la}_a{al}.csv"
+  # Iterate over the search space once, compiling each variant and then
+  # benchmarking it across all kernels.
+  for u, pf, bf, la, al in itertools.product(UNROLLS, PREFETCH, FLATTEN, LAYOUT, ALIGN):
+    params = dict(u=u, pf=pf, bf=bf, la=la, al=al)
+    if params == base:
+      continue
+
+    compile_variant(params, jobs)
+    sz = code_size_bytes()
+    suffix = f"u{u}_p{pf}_b{bf}_l{la}_a{al}"
+
+    for kernel in KERNELS:
+      out_csv = DATA / f"{kernel}_{suffix}.csv"
       run_kernel(kernel, out_csv)
-      s = evaluate(out_csv)
-      s["size"] = sz
-      s["size_rel"] = sz/base_size
-      J = score(s, sz)
-      results.append({"kernel":kernel,"params":params,"stats":s,"J":J})
+      stats = evaluate(out_csv)
+      stats["size"] = sz
+      stats["size_rel"] = sz / base_size if base_size else 1.0
+      results.append({
+        "kernel": kernel,
+        "params": params.copy(),
+        "stats": stats,
+        "J": score(stats, sz)
+      })
 
   # Save summary
-  out = ROOT/"data/reports/summary.json"
+  out = ROOT / "data/reports/summary.json"
   out.parent.mkdir(parents=True, exist_ok=True)
-  with open(out,"w") as f: json.dump(results, f, indent=2)
+  with open(out, "w") as f:
+    json.dump(results, f, indent=2)
   print(f"Wrote {out}")
 
 if __name__=="__main__":
