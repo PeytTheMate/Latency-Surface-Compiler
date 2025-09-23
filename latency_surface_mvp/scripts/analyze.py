@@ -5,7 +5,7 @@ from pathlib import Path
 # Post-processing for autotuner results.
     # - Loads summary.json
     # - Finds best config per kernel
-    # - Compares against baseline, reports % improvements (p99, p99.9, stdev)
+    # - Compares against baseline, reports % improvements (p99, p999, stdev)
     # - Prints concise JSON summary
 
 

@@ -5,8 +5,8 @@ from pathlib import Path
 # Grid search autotuner for latency surface MVP
     # - Iterates over discrete transform configs (unroll, prefetch, and such)
     # - Compiles each variant via CMake, runs benchmarks, collects CSVs
-    # - Computes p50/p90/p99/p99.9/stdev + code size
-    # - Applies weighted jitter-aware objective (favor p99.9) under size cap
+    # - Computes p50/p90/p99/p999/stdev + code size
+    # - Applies weighted jitter-aware objective (favor p999) under size cap
 # Outputs summary.json with per-kernel results
 # Design intent: keep search simple & reproducible on a laptop.
 
@@ -86,7 +86,7 @@ def evaluate(csv_path):
     }
 
 def score(stats, size):
-    """Weighted jitter-aware objective (favor p99.9 latency, penalize large binaries)."""
+    """Weighted jitter-aware objective (favor p999 latency, penalize large binaries)."""
     jitter_penalty = stats["p999"] + 0.1 * stats["stdev"]
     size_penalty = size / 1e6  # scale MB
     return jitter_penalty + size_penalty
