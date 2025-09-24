@@ -1,6 +1,6 @@
 # Latency-Surface MVP Compiler
 
-This repository contains a minimal viable prototype (MVP) of a latency-focused compiler harness, designed around micro-kernels inspired by quant finance workloads. The goal is to autotune low-level compiler transforms (e.g., loop unrolling, memory layout, prefetching) for tail latency performance, with a special emphasis on **p999 latency**.
+This is the beginning of my open-source latency-focused compiler harness, designed around micro-kernels inspired by quant finance workloads. The goal is to autotune low-level compiler transforms (like loop unrolling, memory layout, prefetching) for tail latency performance, specifically tailoring to **p999 latency**.
 
 ---
 
