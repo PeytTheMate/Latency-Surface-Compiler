@@ -1,7 +1,7 @@
 # Parallax - Latency-Surface MVP Compiler
 
 
-Parallax comes from the idea in physics and astronomy in which a shift in perspective reveals hidden structure and depth. Just as parallax gives us a new dimension of understanding, this project aims to eventually run in parallel to standard compilers, exposing a new perspective on optimization. 
+Parallax comes from the idea in physics in perspective reveals hidden structure and depth. Just as parallax gives us a new dimension of understanding, this project aims to eventually run in parallel to standard compilers, exposing a new perspective on optimization. 
 
 This is the beginning of my open-source latency-focused compiler harness, designed around micro-kernels inspired by quant finance workloads. The goal is to autotune low-level compiler transforms (like loop unrolling, memory layout, prefetching) for tail latency performance, specifically tailoring to **p999 latency**.
 
