@@ -1,4 +1,4 @@
-# ⚡ Parallax - Latency-Surface MVP Compiler
+# Parallax - Latency-Surface MVP Compiler
 
 **Parallax** comes from physics, where perspective reveals hidden structure and depth.  
 Just as parallax gives us a new dimension of understanding, this project aims to run **in parallel** to standard compilers, exposing a **new perspective on optimization**.  
@@ -8,7 +8,7 @@ The goal is to autotune low-level compiler transforms (loop unrolling, memory la
 
 ---
 
-## 🔹 Motivation
+## Motivation
 
 In ultra-low latency systems (like HFT), **the average cycles don’t matter, the tails do**.  
 During network microbursts, rare stalls (cache/TLB contention, branch mispredicts, spills) dominate **P99–P99.99 latency** and directly impact P&L.  
@@ -21,7 +21,7 @@ Traditional compilers optimize for throughput.
 
 ---
 
-## 🔹 Overview
+## Overview
 
 The project currently wraps a **CMake-driven micro-kernel benchmark harness**.  
 It benchmarks three quant-style kernels:
@@ -38,7 +38,7 @@ Post-processing (`analyze.py`) and visualization (`plot_report.py`) summarize re
 
 ---
 
-## 🔹 Prerequisites
+## Prerequisites
 
 - **CMake** ≥ 3.20  
 - **C++20 compiler** (tested with Clang/GCC)  
